@@ -24,6 +24,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install cython kivy-ios
 
+    - name: Build Python3 and Kivy Recipes
+      run: |
+        toolchain build python3 kivy
+
     - name: Create Xcode Project with toolchain
       run: |
         toolchain create MyiOSApp .
