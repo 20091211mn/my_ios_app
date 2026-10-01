@@ -24,33 +24,39 @@ jobs:
         python -m pip install --upgrade pip
         pip install cython kivy-ios
 
+    - name: Cache Kivy-iOS Built Recipes
+      uses: actions/cache@v3
+      with:
+        path: ~/.kivy-ios
+        key: ${{ runner.os }}-kivy-ios-recipes
+
     - name: Build Python3 and Kivy Recipes
       run: |
         toolchain build python3 kivy
 
     - name: Create Xcode Project with toolchain
       run: |
-        toolchain create MyiOSApp .
+        toolchain create myiosapp .
 
     - name: Fast Archive & Zip IPA
       run: |
-        cd MyiOSApp-ios
-        xcodebuild -project MyiOSApp.xcodeproj \
-                   -scheme MyiOSApp \
+        cd myiosapp-ios
+        xcodebuild -project myiosapp.xcodeproj \
+                   -scheme myiosapp \
                    -sdk iphoneos \
                    -configuration Release \
                    CODE_SIGN_IDENTITY="" \
                    CODE_SIGNING_REQUIRED=NO \
                    CODE_SIGNING_ALLOWED=NO \
-                   archive -archivePath ./build/MyiOSApp.xcarchive
+                   archive -archivePath ./build/myiosapp.xcarchive
 
         mkdir -p ./build/Payload
-        cp -r ./build/MyiOSApp.xcarchive/Products/Applications/*.app ./build/Payload/
+        cp -r ./build/myiosapp.xcarchive/Products/Applications/*.app ./build/Payload/
         cd ./build
-        zip -q -r MyiOSApp.ipa Payload
+        zip -q -r myiosapp.ipa Payload
 
     - name: Upload IPA Artifact
       uses: actions/upload-artifact@v4
       with:
         name: iOS-IPA-Package
-        path: MyiOSApp-ios/build/MyiOSApp.ipa
+        path: myiosapp-ios/build/myiosapp.ipa
