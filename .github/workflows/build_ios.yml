@@ -24,33 +24,34 @@ jobs:
         python -m pip install --upgrade pip
         pip install cython kivy-ios
 
-    # كاش متقدم ومباشر لمجلدات التجميع الكبيرة
-    - name: Cache Full Toolchain Distribution
+    # كاش قوي لمجلدات التنزيل والبناء لتسريع المرات القادمة جداً
+    - name: Cache Kivy-iOS Downloads & Build
       uses: actions/cache@v3
       with:
         path: |
           ~/.kivy-ios
+          build
           dist
-        key: ${{ runner.os }}-kivy-ios-dist-v2
+        key: ${{ runner.os }}-kivy-ios-cache-v3
 
+    # محاولة البناء مع التكرار تلقائياً في حال حدوث خطأ شبكة HTTP 504
     - name: Build Python3 and Kivy Recipes
       run: |
-        toolchain build python3 kivy
+        toolchain build python3 kivy || toolchain build python3 kivy
 
     - name: Create Xcode Project with toolchain
       run: |
         toolchain create myiosapp .
 
-    # حل مشكلة rsync والملفات المفقودة وتخطي خطأ exit code 65
     - name: Fast Build App & Package IPA
       run: |
         cd myiosapp-ios
         
-        # إنشاء مجلدات وملفات وهمية لمنع خطأ rsync
+        # إنشاء ملفات وصور افتراضية لمنع توقف rsync
         mkdir -p YourApp/images
         touch YourApp/pictures.kv YourApp/shadow32.png YourApp/images/faust_github.jpg YourApp/images/.empty
         
-        # بناء مباشر بدون خيارات أرشفة معقدة
+        # بناء التطبيق للتجميع المباشر
         xcodebuild -project myiosapp.xcodeproj \
                    -scheme myiosapp \
                    -sdk iphoneos \
@@ -61,7 +62,7 @@ jobs:
                    IPHONEOS_DEPLOYMENT_TARGET=12.0 \
                    build || true
 
-        # تجميع الـ IPA
+        # تجميع ملف الـ IPA
         mkdir -p build/Payload
         find . -name "*.app" -type d -exec cp -r {} build/Payload/ \; 2>/dev/null || true
         
