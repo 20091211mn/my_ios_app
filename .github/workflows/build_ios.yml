@@ -1,0 +1,51 @@
+name: Build Fast iOS IPA
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-13
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install Dependencies & kivy-ios
+      run: |
+        python -m pip install --upgrade pip
+        pip install kivy-ios
+
+    - name: Create Xcode Project with toolchain
+      run: |
+        toolchain create MyiOSApp .
+
+    - name: Fast Archive & Zip IPA
+      run: |
+        cd MyiOSApp-ios
+        xcodebuild -project MyiOSApp.xcodeproj \
+                   -scheme MyiOSApp \
+                   -sdk iphoneos \
+                   -configuration Release \
+                   CODE_SIGN_IDENTITY="" \
+                   CODE_SIGNING_REQUIRED=NO \
+                   CODE_SIGNING_ALLOWED=NO \
+                   archive -archivePath ./build/MyiOSApp.xcarchive
+
+        mkdir -p ./build/Payload
+        cp -r ./build/MyiOSApp.xcarchive/Products/Applications/*.app ./build/Payload/
+        cd ./build
+        zip -q -r MyiOSApp.ipa Payload
+
+    - name: Upload IPA Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: iOS-IPA-Package
+        path: MyiOSApp-ios/build/MyiOSApp.ipa
