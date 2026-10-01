@@ -38,22 +38,29 @@ jobs:
       run: |
         toolchain create myiosapp .
 
-    - name: Fast Archive & Zip IPA
+    - name: Fast Build App & Package IPA
       run: |
         cd myiosapp-ios
+        
+        # بناء التطبيق مباشرة لنسبة توافق أعلى
         xcodebuild -project myiosapp.xcodeproj \
                    -scheme myiosapp \
                    -sdk iphoneos \
                    -configuration Release \
-                   IPHONEOS_DEPLOYMENT_TARGET=12.0 \
                    CODE_SIGN_IDENTITY="" \
                    CODE_SIGNING_REQUIRED=NO \
                    CODE_SIGNING_ALLOWED=NO \
-                   archive -archivePath ./build/myiosapp.xcarchive
+                   IPHONEOS_DEPLOYMENT_TARGET=12.0 \
+                   build
 
-        mkdir -p ./build/Payload
-        cp -r ./build/myiosapp.xcarchive/Products/Applications/*.app ./build/Payload/
-        cd ./build
+        # إنشاء مجلد الـ IPA وتغليفه
+        mkdir -p build/Payload
+        cp -r build/Release-iphoneos/*.app build/Payload/ 2>/dev/null || cp -r build/Products/Release-iphoneos/*.app build/Payload/ 2>/dev/null || cp -r myiosapp-ios/build/Release-iphoneos/*.app build/Payload/ 2>/dev/null || true
+        
+        # إذا لم يجد التطبيق في المسارات السابقة، جلب التطبيق المجمع مباشرة
+        find . -name "*.app" -type d -exec cp -r {} build/Payload/ \;
+        
+        cd build
         zip -q -r myiosapp.ipa Payload
 
     - name: Upload IPA Artifact
