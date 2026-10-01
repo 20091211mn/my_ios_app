@@ -24,7 +24,6 @@ jobs:
         python -m pip install --upgrade pip
         pip install cython kivy-ios
 
-    # كاش قوي لمجلدات التنزيل والبناء لتسريع المرات القادمة جداً
     - name: Cache Kivy-iOS Downloads & Build
       uses: actions/cache@v3
       with:
@@ -34,7 +33,6 @@ jobs:
           dist
         key: ${{ runner.os }}-kivy-ios-cache-v3
 
-    # محاولة البناء مع التكرار تلقائياً في حال حدوث خطأ شبكة HTTP 504
     - name: Build Python3 and Kivy Recipes
       run: |
         toolchain build python3 kivy || toolchain build python3 kivy
@@ -43,15 +41,15 @@ jobs:
       run: |
         toolchain create myiosapp .
 
-    - name: Fast Build App & Package IPA
+    - name: Full App Bundle & Package IPA
       run: |
         cd myiosapp-ios
         
-        # إنشاء ملفات وصور افتراضية لمنع توقف rsync
+        # إنشاء المجلدات الوهمية لمنع خطأ rsync
         mkdir -p YourApp/images
         touch YourApp/pictures.kv YourApp/shadow32.png YourApp/images/faust_github.jpg YourApp/images/.empty
         
-        # بناء التطبيق للتجميع المباشر
+        # بناء مشروع Xcode وتجميع المكاتب بالكامل
         xcodebuild -project myiosapp.xcodeproj \
                    -scheme myiosapp \
                    -sdk iphoneos \
@@ -60,17 +58,17 @@ jobs:
                    CODE_SIGNING_REQUIRED=NO \
                    CODE_SIGNING_ALLOWED=NO \
                    IPHONEOS_DEPLOYMENT_TARGET=12.0 \
-                   build || true
+                   build
 
-        # تجميع ملف الـ IPA
+        # تجهيز Payload وتضمين كافة مكاتب ورزم Python/Kivy
         mkdir -p build/Payload
-        find . -name "*.app" -type d -exec cp -r {} build/Payload/ \; 2>/dev/null || true
+        cp -R build/Release-iphoneos/myiosapp.app build/Payload/ 2>/dev/null || cp -R build/Products/Release-iphoneos/myiosapp.app build/Payload/ 2>/dev/null || find . -name "*.app" -type d -exec cp -R {} build/Payload/ \;
         
         cd build
-        zip -q -r myiosapp.ipa Payload
+        zip -r -9 myiosapp.ipa Payload
 
     - name: Upload IPA Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: iOS-IPA-Package
+        name: Full-iOS-IPA-Package
         path: myiosapp-ios/build/myiosapp.ipa
